@@ -48,10 +48,15 @@ def run_ucb(knowledge, user_prob, _event_num, _target, _user_num):
 
 # run common ucb in contextual
 def run_ucb_in_contextual(knowledge, user_prob, _events, _target, _user_num):
+
+    # copy the user knowledge and oracle knowledge
     k = knowledge.copy()
+    oracle_k = user_prob.copy()
+
     events_str = list(map(str, _events))
     num = 1
     regret = list()
+    rate_choose = list()
     for event_id in events_str:
         # different situation
         sit_choose = 'sit' + event_id
@@ -64,9 +69,27 @@ def run_ucb_in_contextual(knowledge, user_prob, _events, _target, _user_num):
 
         for i in range(_user_num):
             accumulate.append(sum(m[0:i + 1]))
+
+        # choose demand
         signal = list([x < _target+0.5 for x in accumulate])
         k.loc[:, 'signal'] = signal
         k.sort_values(by=['index'], ascending=True, inplace=True)
+
+        # oracle index and generate signal
+        oracle_k.sort_values(by=['index'], ascending=False, inplace=True)
+        oracle_m = oracle_k[sit_choose].tolist()
+        oracle_accumulate = list()
+        for i in range(_user_num):
+            oracle_accumulate.append(sum(oracle_m[0:i]))
+        oracle_signal = list([x < _target for x in oracle_accumulate])
+        oracle_k['signal'] = oracle_signal
+        oracle_k.sort_values(by=['index'], ascending=True, inplace=True)
+
+        # calculate the rate
+        same_choose = oracle_k['signal'] & k['signal']
+        rate_choose.append(same_choose.sum() / k['signal'].sum())
+
+        # deploy and update
         sum_feedback = 0
         for i in range(_user_num):
             if k.loc[i, 'signal']:
@@ -78,16 +101,20 @@ def run_ucb_in_contextual(knowledge, user_prob, _events, _target, _user_num):
                 sum_feedback = sum_feedback + feedback
         regret.append(sum_feedback)
         num = num + 1
-    return k, regret
+    return k, regret, rate_choose
 
 
 # run contextual ucb
 def run_contextual_ucb(knowledge, user_prob, _events, _target, _user_num):
+
+    # copy the user knowledge and oracle knowledge
     k = knowledge.copy()
+    oracle_k = user_prob.copy()
 
     events_str = list(map(str, _events))
     num_sit = np.zeros(3)
     regret = list()
+    rate_choose = list()
     for event_id in events_str:
 
         # different situation
@@ -106,10 +133,23 @@ def run_contextual_ucb(knowledge, user_prob, _events, _target, _user_num):
             accumulate.append(sum(m[0:i + 1]))
 
         # choose demand
-        # discuss the target???????
         signal = list([x < _target for x in accumulate])
         k.loc[:, 'signal'] = signal
         k.sort_values(by=['index'], ascending=True, inplace=True)
+
+        # oracle index and generate signal
+        oracle_k.sort_values(by=['index'], ascending=False, inplace=True)
+        oracle_m = oracle_k[sit_choose].tolist()
+        oracle_accumulate = list()
+        for i in range(_user_num):
+            oracle_accumulate.append(sum(oracle_m[0:i]))
+        oracle_signal = list([x < _target for x in oracle_accumulate])
+        oracle_k['signal'] = oracle_signal
+        oracle_k.sort_values(by=['index'], ascending=True, inplace=True)
+
+        # calculate the rate
+        same_choose = oracle_k['signal'] & k['signal']
+        rate_choose.append(same_choose.sum()/k['signal'].sum())
 
         # deploy and update
         sum_feedback = 0
@@ -124,7 +164,7 @@ def run_contextual_ucb(knowledge, user_prob, _events, _target, _user_num):
                 sum_feedback = sum_feedback + feedback
         regret.append(sum_feedback)
         num_sit[int(event_id) - 1] = num_sit[int(event_id) - 1] + 1
-    return k, regret
+    return k, regret, rate_choose
 
 
 # the oracle play results
@@ -152,7 +192,7 @@ def oracle_results(user_prob, _events, _target, _user_num):
                 feedback = np.random.binomial(1, user_prob[sit_choose][i])
                 sum_feedback = sum_feedback+feedback
         regret.append(sum_feedback)
-    return k, regret
+    return regret
 
 
 # scale the probability
@@ -214,8 +254,19 @@ def plot_regret(ucb_res, contextual_res, oracle_res):
 
 
 # plot the optimal choose
-def plot_optimal_choose():
-    pass
+def plot_optimal_choose(_rate1, _rate2):
+    rounds = range(len(_rate1))
+    fig = plt.figure()
+    plt.rc('font', family='Times New Roman', style='normal', size=13)
+    plt.subplots_adjust(left=None, bottom=None, right=None, top=None, wspace=None, hspace=None)
+    ax = fig.add_subplot(1, 1, 1)
+    ax.scatter(rounds, _rate1, color='orange', marker='*')
+    ax.scatter(rounds, _rate2, color='blue', marker='x')
+    ax.set_xlabel('round')
+    ax.set_ylabel('right choose rate')
+    ax.axis('on')
+    plt.legend(labels=['UCB', 'CUCB'])
+    plt.show()
 
 
 # fundamental parameter
@@ -225,8 +276,8 @@ alpha = 2  # UCB parameter
 if __name__ == '__main__':
     start = time.clock()
     # fundamental parameters
-    user_num = 10  # the number of participated customers
-    event_num = 1000  # the number of demand response event
+    user_num = 10 # the number of participated customers
+    event_num = 200  # the number of demand response event
 
     # initial configuration
     # user's configuration
@@ -258,11 +309,13 @@ if __name__ == '__main__':
     # generate random sequence
     events = list(np.random.permutation(range(event_num)) % 3 + 1)
     # knowledge_common, results1 = run_ucb(k1, User_PROB, event_num, target, user_num)
-    knowledge_common_in_contextual, results1 = run_ucb_in_contextual(k2, User_PROB, events, target, user_num)
-    knowledge_contextual, results2 = run_contextual_ucb(k3, User_PROB, events, target, user_num)
+    knowledge_common_in_contextual, results1, rate1 = run_ucb_in_contextual(k2, User_PROB, events, target, user_num)
+    knowledge_contextual, results2, rate2 = run_contextual_ucb(k3, User_PROB, events, target, user_num)
     oracle_result = oracle_results(User_PROB, events, target, user_num)
+
     plot_results(results1, results2, oracle_result, target)
     plot_regret(results1, results2, oracle_result)
+    plot_optimal_choose(rate1, rate2)
     elapsed = time.clock()-start
     print("time used", elapsed)
 
