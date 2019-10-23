@@ -87,7 +87,7 @@ def run_ucb_in_contextual(knowledge, user_prob, _events, _target, _user_num):
         oracle_k.sort_values(by=['index'], ascending=True, inplace=True)
 
         # calculate the regret
-        # regret.append(abs(accumulate[sum(signal)-1]-oracle_accumulate[sum(oracle_signal)-1]))
+        regret.append(abs(accumulate[sum(signal)-1]-oracle_accumulate[sum(oracle_signal)-1]))
 
         # calculate the rate
         same_choose = oracle_k['signal'] & k['signal']
@@ -106,7 +106,7 @@ def run_ucb_in_contextual(knowledge, user_prob, _events, _target, _user_num):
                 sum_feedback = sum_feedback + feedback
                 sum_p = sum_p + abs(k.loc[i, 'sit1'] - user_prob[sit_choose][i])
         results.append(sum_feedback)
-        regret.append(sum_p)
+        # regret.append(sum_p)
         num = num + 1
     return k, results, rate_choose, regret
 
@@ -156,7 +156,7 @@ def run_contextual_ucb(knowledge, user_prob, _events, _target, _user_num):
         oracle_k.sort_values(by=['index'], ascending=True, inplace=True)
 
         # calculate the regret
-        # regret.append(abs(accumulate[sum(signal)-1]-oracle_accumulate[sum(oracle_signal)-1]))
+        regret.append(abs(accumulate[sum(signal)-1]-oracle_accumulate[sum(oracle_signal)-1]))
 
         # calculate the rate
         same_choose = oracle_k['signal'] & k['signal']
@@ -175,22 +175,22 @@ def run_contextual_ucb(knowledge, user_prob, _events, _target, _user_num):
                 k.loc[i, time_choose] = k.loc[i, time_choose] + 1
                 sum_feedback = sum_feedback + feedback
                 sum_p = sum_p + abs(k.loc[i, sit_choose] - user_prob[sit_choose][i])
-        regret.append(sum_p)
+        # regret.append(sum_p)
         results.append(sum_feedback)
         num_sit[int(event_id) - 1] = num_sit[int(event_id) - 1] + 1
     return k, results, rate_choose, regret
 
 
 # the oracle play results
-def oracle_results(user_prob, _events, _target, _user_num):
+def oracle_play(user_prob, _events, _target, _user_num):
     events_str = list(map(str, _events))
-    regret = list([])
+    results = list()
     k = user_prob.copy()
     for event_id in events_str:
         sit_choose = 'sit' + event_id
         k.sort_values(by=[sit_choose], ascending=False, inplace=True)
         m = k[sit_choose].tolist()
-        accumulate = list([])
+        accumulate = list()
         for i in range(_user_num):
             accumulate.append(sum(m[0:i+1]))
 
@@ -205,8 +205,8 @@ def oracle_results(user_prob, _events, _target, _user_num):
             if k.loc[i, 'signal']:
                 feedback = np.random.binomial(1, user_prob[sit_choose][i])
                 sum_feedback = sum_feedback+feedback
-        regret.append(sum_feedback)
-    return regret
+        results.append(sum_feedback)
+    return results
 
 
 # scale the probability
@@ -258,7 +258,7 @@ def plot_mismatch(ucb_res, contextual_res, oracle_res, _target):
     ax.plot(rounds, contextual_mismatch, color='blue', marker='x')
     ax.plot(rounds, oracle_mismatch, color='black', marker='+')
     ax.set_xlabel('round')
-    ax.set_ylabel('regret')
+    ax.set_ylabel('mismatch')
     ax.axis('on')
     plt.legend(labels=['UCB', 'CUCB', 'oracle'])
     plt.grid(True)
@@ -338,8 +338,8 @@ alpha = 2  # UCB parameter
 if __name__ == '__main__':
     start = time.clock()
     # fundamental parameters
-    user_num = 10  # the number of participated customers
-    event_num = 100  # the number of demand response event
+    user_num = 50  # the number of participated customers
+    event_num = 200  # the number of demand response event
 
     # initial configuration
     # user's configuration
@@ -350,7 +350,7 @@ if __name__ == '__main__':
     User_PROB['index'] = range(user_num)
 
     # power system command configuration in
-    target = 5  # fixed target which can be time-varying
+    target = 20  # fixed target which can be time-varying
 
     # demand aggregator configuration
     KNOWLEDGE_INIT = pd.DataFrame(columns=['index', "sit1", 'UCB1', "sit2", 'UCB2', "sit3", 'UCB3',
@@ -373,11 +373,11 @@ if __name__ == '__main__':
     # knowledge_common, results1 = run_ucb(k1, User_PROB, event_num, target, user_num)
     knowledge_common_in_contextual, results1, rate1, regret1 = run_ucb_in_contextual(k2, User_PROB, events, target, user_num)
     knowledge_contextual, results2, rate2, regret2 = run_contextual_ucb(k3, User_PROB, events, target, user_num)
-    oracle_result = oracle_results(User_PROB, events, target, user_num)
+    oracle_results = oracle_play(User_PROB, events, target, user_num)
     # plot_regret(results1, results2, oracle_result)
     # plot_optimal_choose(rate1, rate2)
-    plot_results(results1, results2, oracle_result, target)
-    plot_mismatch(results1, results2, oracle_result, target)
+    plot_results(results1, results2, oracle_results, target)
+    plot_mismatch(results1, results2, oracle_results, target)
     plot_true_regret(regret1, regret2)
     elapsed = time.clock()-start
     print("time used", elapsed)
