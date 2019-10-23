@@ -10,42 +10,6 @@ import time
 import matplotlib.pyplot as plt
 
 
-# just for testing the ubb
-def run_ucb(knowledge, user_prob, _event_num, _target, _user_num):
-    k = knowledge.copy()
-    # plot the graph
-    arm1 = list([])
-    for j in range(_event_num):
-        # calculate UCB
-        ucb1 = k['sit1'] + np.sqrt(alpha * np.log(j+1) / (2 * k['time1']))
-        k.loc[:, 'UCB1'] = ucb1
-        # index
-        # need to be revised
-        k.sort_values(by=['UCB1'], ascending=False, inplace=True)
-        m = k['sit1'].tolist()
-        accumulate = list([])
-        for i in range(_user_num):
-            accumulate.append(sum(m[0:i + 1]))
-
-        # choose demand
-        signal = list([x < _target+0.5 for x in accumulate])
-        k.loc[:, 'signal'] = signal
-        # need to be revised
-        k.sort_values(by=['index'], ascending=True, inplace=True)
-
-        # deploy and update
-        for i in range(_user_num):
-            if k.loc[i, 'signal']:
-                # feedback
-                _feedback = np.random.binomial(1, user_prob['sit1'][i])
-                # update
-                k.loc[i, 'sit1'] = (k.loc[i, 'sit1'] * k.loc[i, 'time1'] + _feedback) / (k.loc[i, 'time1'] + 1)
-                k.loc[i, 'time1'] = k.loc[i, 'time1'] + 1
-        arm1.append(k.loc[1, 'sit1'])
-
-    return k
-
-
 # run common ucb in contextual
 def run_ucb_in_contextual(knowledge, user_prob, _truth, _events, _target, _user_num):
 
@@ -98,19 +62,20 @@ def run_ucb_in_contextual(knowledge, user_prob, _truth, _events, _target, _user_
 
         # deploy and update
         sum_feedback = 0
-        sum_p = 0
+
         for i in range(_user_num):
             if k.loc[i, 'signal']:
+
                 # feedback
                 feedback = _truth[i, j]
+
                 # update
                 k.loc[i, 'sit1'] = (k.loc[i, 'sit1'] * k.loc[i, 'time1'] + feedback) / ((k.loc[i, 'time1']) + 1)
                 k.loc[i, 'time1'] = k.loc[i, 'time1'] + 1
                 sum_feedback = sum_feedback + feedback
-                sum_p = sum_p + abs(k.loc[i, 'sit1'] - user_prob[sit_choose][i])
+
         j = j + 1
         results.append(sum_feedback)
-        # regret.append(sum_p)
         num = num + 1
     return k, results, rate_choose, regret
 
@@ -172,18 +137,19 @@ def run_contextual_ucb(knowledge, user_prob, _truth, _events, _target, _user_num
 
         # deploy and update
         sum_feedback = 0
-        sum_p = 0
+
         for i in range(_user_num):
             if k.loc[i, 'signal']:
+
                 # feedback
                 feedback = _truth[i, j]
+
                 # update the probability
                 k.loc[i, sit_choose] = (k.loc[i, sit_choose] * k.loc[i, time_choose] + feedback) / \
                                        (k.loc[i, time_choose] + 1)
                 k.loc[i, time_choose] = k.loc[i, time_choose] + 1
                 sum_feedback = sum_feedback + feedback
-                sum_p = sum_p + abs(k.loc[i, sit_choose] - oracle_k[sit_choose][i])
-        # regret.append(sum_p)
+
         j = j + 1
         results.append(sum_feedback)
         num_sit[int(event_id) - 1] = num_sit[int(event_id) - 1] + 1
@@ -203,6 +169,7 @@ def oracle_play(user_prob, _truth, _events, _target, _user_num):
         accumulate = list()
         for i in range(_user_num):
             accumulate.append(sum(m[0:i+1]))
+
         # choose the demand
         signal = list([x < _target+0.5 for x in accumulate])
         k['signal'] = signal
@@ -309,26 +276,26 @@ def plot_true_regret(reg1, reg2):
     return 0
 
 
-# plot regret
-def plot_regret(ucb_res, contextual_res, oracle_res):
-    _regret1 = list()
-    _regret2 = list()
-    accumulate_regret1 = list()
-    accumulate_regret2 = list()
+# plot accumulate regret
+def plot_bias(ucb_res, contextual_res, oracle_res):
+    _bias1 = list()
+    _bias2 = list()
+    accumulate_bias1 = list()
+    accumulate_bias2 = list()
     for i in range(len(ucb_res)):
-        _regret1.append(np.square(ucb_res[i]-oracle_res[i]))
-        _regret2.append(np.square(contextual_res[i]-oracle_res[i]))
+        _bias1.append(np.square(ucb_res[i]-oracle_res[i]))
+        _bias2.append(np.square(contextual_res[i]-oracle_res[i]))
     for i in range(len(ucb_res)):
-        # average bias
-        accumulate_regret1.append(sum(_regret1[0:i+1]))
-        accumulate_regret2.append(sum(_regret2[0:i+1]))
+        # sum bias
+        accumulate_bias1.append(sum(_bias1[0:i+1]))
+        accumulate_bias2.append(sum(_bias2[0:i+1]))
     rounds = range(len(ucb_res))
     fig = plt.figure()
     plt.rc('font', family='Times New Roman', style='normal', size=13)
     plt.subplots_adjust(left=None, bottom=None, right=None, top=None, wspace=None, hspace=None)
     ax = fig.add_subplot(1, 1, 1)
-    ax.plot(rounds, accumulate_regret1, color='orange', marker='*')
-    ax.plot(rounds, accumulate_regret2, color='blue', marker='x')
+    ax.plot(rounds, accumulate_bias1, color='orange', marker='*')
+    ax.plot(rounds, accumulate_bias2, color='blue', marker='x')
     ax.set_xlabel('round')
     ax.set_ylabel('sum_difference')
     ax.axis('on')
@@ -355,66 +322,52 @@ def plot_optimal_choose(_rate1, _rate2):
 
 
 # fundamental parameter
-alpha = 2  # UCB parameter
+alpha = 2  # UCB confidence parameter
 
 
 if __name__ == '__main__':
     start = time.clock()
     # fundamental parameters
     user_num = 50  # the number of participated customers
-    event_num = 100  # the number of demand response event
-    sit_num = 3 # the number of situations
-    target = 20  # fixed target which can be time-varying
+    event_num = 40  # the number of demand response event
+    sit_num = 3  # the number of situations
+
+    # power system command configuration
+    target = 10  # fixed target which can be time-varying
 
     # initial configuration
     # user's configuration
     User_PROB = pd.DataFrame(columns=['index', "sit1", "sit2", "sit3"])
-    # User_PROB["sit1"] = prob_generate(user_num)
-    # User_PROB["sit2"] = prob_generate(user_num)
-    # User_PROB["sit3"] = prob_generate(user_num)
-    # User_PROB["sit4"] = prob_generate(user_num)
-
     User_PROB['index'] = range(user_num)
-
-    # power system command configuration in
-    target = 20  # fixed target which can be time-varying
 
     # demand aggregator configuration
     KNOWLEDGE_INIT = pd.DataFrame(columns=['index', "sit1", 'UCB1', "sit2", 'UCB2', "sit3", 'UCB3',
                                            "power", "time1", 'time2', 'time3', 'signal'])
-    # KNOWLEDGE_INIT['sit1'] = np.zeros(user_num)+0.5
-    # KNOWLEDGE_INIT['sit2'] = np.zeros(user_num)+0.5
-    # KNOWLEDGE_INIT['sit3'] = np.zeros(user_num)+0.5
-    # KNOWLEDGE_INIT['sit4'] = np.zeros(user_num)+0.5
     KNOWLEDGE_INIT['power'] = 200
-    # KNOWLEDGE_INIT['time1'] = 1
-    # KNOWLEDGE_INIT['time2'] = 1
-    # KNOWLEDGE_INIT['time3'] = 1
-    # KNOWLEDGE_INIT['time4'] = 1
     KNOWLEDGE_INIT['index'] = range(user_num)
     KNOWLEDGE_INIT['signal'] = 0
 
     for i_e in range(sit_num):
         User_PROB['sit'+str(i_e+1)] = prob_generate(user_num)
-        KNOWLEDGE_INIT['sit'+str(i_e+1)] = np.zeros(user_num)+0.1
+        KNOWLEDGE_INIT['sit'+str(i_e+1)] = np.zeros(user_num)+0.5
         KNOWLEDGE_INIT['time'+str(i_e+1)] = 1
-
-    k1 = KNOWLEDGE_INIT.copy()
-    k2 = KNOWLEDGE_INIT.copy()
-    k3 = KNOWLEDGE_INIT.copy()
 
     # generate random sequence
     events = list(np.random.permutation(range(event_num)) % sit_num + 1)
-    # events = list(np.zeros(event_num)+1)
+
+    User_Expectation = User_PROB.apply(np.sum, axis=0)
+
+    # play the truth
     truth = run_truth(events, User_PROB, user_num, event_num)
-    # knowledge_common, results1 = run_ucb(k1, User_PROB, event_num, target, user_num)
-    knowledge_common_in_contextual, results1, rate1, regret1 = run_ucb_in_contextual(k2, User_PROB, truth, events,
-                                                                                     target, user_num)
-    knowledge_contextual, results2, rate2, regret2 = run_contextual_ucb(k3, User_PROB, truth, events, target,
-                                                                        user_num, sit_num)
+
+    # play the common UCB in multi-contexts based on the truth
+    knowledge_common_in_contextual, results1, rate1, regret1 = run_ucb_in_contextual(KNOWLEDGE_INIT, User_PROB, truth,
+                                                                                     events, target, user_num)
+    # play the contextual-UCB algorithm based on the truth
+    knowledge_contextual, results2, rate2, regret2 = run_contextual_ucb(KNOWLEDGE_INIT, User_PROB, truth, events,
+                                                                        target, user_num, sit_num)
+    # play the oracle choose based on the truth
     oracle, oracle_results = oracle_play(User_PROB, truth, events, target, user_num)
-    # plot_regret(results1, results2, oracle_result)
-    # plot_optimal_choose(rate1, rate2)
     plot_results(results1, results2, oracle_results, target)
     plot_mismatch(results1, results2, oracle_results, target)
     plot_true_regret(regret1, regret2)
