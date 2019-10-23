@@ -225,6 +225,35 @@ def plot_results(ucb_res, contextual_res, oracle_res, _target):
     return 0
 
 
+# plot mismatch
+def plot_mismatch(ucb_res, contextual_res, oracle_res, _target):
+    ucb_mismatch = list()
+    contextual_mismatch = list()
+    oracle_mismatch = list()
+    num = len(ucb_res)
+    for i in range(num):
+        ucb_mismatch.append(np.square(ucb_res[i]-_target))
+        contextual_mismatch.append(np.square(contextual_res[i]-_target))
+        oracle_mismatch.append(np.square(oracle_res[i]-_target))
+    rounds = range(num)
+    fig = plt.figure()
+    plt.rc('font', family='Times New Roman', style='normal', size=13)
+    plt.subplots_adjust(left=None, bottom=None, right=None, top=None, wspace=None, hspace=None)
+    ax = fig.add_subplot(1, 1, 1)
+    ax.plot(rounds, ucb_mismatch, color='orange', marker='*')
+    ax.plot(rounds, contextual_mismatch, color='blue', marker='x')
+    ax.plot(rounds, oracle_mismatch, color='black', marker='+')
+    ax.set_xlabel('round')
+    ax.set_ylabel('regret')
+    ax.axis('on')
+    plt.legend(labels=['UCB', 'CUCB'])
+    plt.grid(True)
+    plt.show()
+    return 0
+
+
+# plot regret
+
 # plot regret
 def plot_regret(ucb_res, contextual_res, oracle_res):
     regret1 = list()
