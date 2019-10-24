@@ -99,9 +99,6 @@ def run_contextual_ucb(knowledge, user_prob, _truth, _events, _target, _user_num
         sit_choose = 'sit' + event_id
         time_choose = 'time' + event_id
         ucb_choose = 'UCB' + event_id
-        print(sit_choose)
-        print(time_choose)
-        print(ucb_choose)
 
         # index
         ucb = k[sit_choose] + np.sqrt(alpha * np.log(num_sit[int(event_id) - 1]) / (2 * k[time_choose]))
@@ -329,7 +326,7 @@ if __name__ == '__main__':
     start = time.clock()
     # fundamental parameters
     user_num = 50  # the number of participated customers
-    event_num = 40  # the number of demand response event
+    event_num = 80  # the number of demand response event
     sit_num = 3  # the number of situations
 
     # power system command configuration
