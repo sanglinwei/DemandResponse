@@ -53,8 +53,6 @@ def run_ucb_in_contextual(knowledge, user_prob, _truth, _events, _target, _user_
 
         # calculate the regret
         regret.append(abs(accumulate[sum(signal)-1]-oracle_accumulate[sum(oracle_signal)-1]))
-        print(accumulate)
-        print(oracle_accumulate)
 
         # calculate the rate
         same_choose = oracle_k['signal'] & k['signal']
@@ -200,13 +198,14 @@ def plot_results(ucb_res, contextual_res, oracle_res, _target):
     plt.rc('font', family='Times New Roman', style='normal', size=13)
     plt.subplots_adjust(left=None, bottom=None, right=None, top=None, wspace=None, hspace=None)
     ax = fig.add_subplot(1, 1, 1)
-    ax.plot(x, ucb_res, color='orange')
-    ax.plot(x, contextual_res, color='blue')
-    ax.plot(x, oracle_res, color='red')
-    ax.plot(x, target_line, color='black', linestyle='-')
+    ax.plot(x, ucb_res)
+    ax.plot(x, contextual_res)
+    ax.plot(x, oracle_res)
+    ax.plot(x, target_line)
     ax.set_xlabel('round')
     ax.set_ylabel('reward')
     ax.axis('on')
+    plt.tight_layout()
     plt.legend(labels=['UCB', 'CUCB', 'Oracle', 'target'])
     plt.grid(True)
     plt.show()
@@ -237,16 +236,17 @@ def plot_mismatch(ucb_res, contextual_res, oracle_res, _target):
         contextual_mismatch.append(np.square(contextual_res[i]-_target))
         oracle_mismatch.append(np.square(oracle_res[i]-_target))
     rounds = range(num)
-    fig = plt.figure()
+    plt.figure()
     plt.rc('font', family='Times New Roman', style='normal', size=13)
     plt.subplots_adjust(left=None, bottom=None, right=None, top=None, wspace=None, hspace=None)
-    ax = fig.add_subplot(1, 1, 1)
-    ax.plot(rounds, ucb_mismatch, color='orange', marker='*')
-    ax.plot(rounds, contextual_mismatch, color='blue', marker='x')
-    ax.plot(rounds, oracle_mismatch, color='black', marker='+')
-    ax.set_xlabel('round')
-    ax.set_ylabel('mismatch')
-    ax.axis('on')
+    plt.subplot(111)
+    plt.scatter(rounds, ucb_mismatch, marker='o')
+    plt.scatter(rounds, contextual_mismatch, marker='x')
+    plt.scatter(rounds, oracle_mismatch, marker='+')
+    plt.xlabel('round')
+    plt.ylabel('mismatch')
+    plt.axis('on')
+    plt.tight_layout()
     plt.legend(labels=['UCB', 'CUCB', 'oracle'])
     plt.grid(True)
     plt.title('Mismatch')
@@ -255,17 +255,31 @@ def plot_mismatch(ucb_res, contextual_res, oracle_res, _target):
 
 
 # plot regret
-def plot_true_regret(reg1, reg2):
+def plot_true_regret(reg1, reg2, _events):
     rounds = range(len(reg1))
     fig = plt.figure()
     plt.rc('font', family='Times New Roman', style='normal', size=13)
     plt.subplots_adjust(left=None, bottom=None, right=None, top=None, wspace=None, hspace=None)
     ax = fig.add_subplot(1, 1, 1)
-    ax.plot(rounds, reg1, color='orange', marker='*')
-    ax.plot(rounds, reg2, color='blue', marker='x')
+    seq = 0
+    for event in _events:
+        if event == 1:
+            ax.scatter(rounds[seq], reg1[seq], color='orange', marker='1')
+            ax.scatter(rounds[seq], reg2[seq], color='blue', marker='1')
+        if event == 2:
+            ax.scatter(rounds[seq], reg1[seq], color='orange', marker='+')
+            ax.scatter(rounds[seq], reg2[seq], color='blue', marker='+')
+        if event == 3:
+            ax.scatter(rounds[seq], reg1[seq], color='orange', marker='*')
+            ax.scatter(rounds[seq], reg2[seq], color='blue', marker='*')
+        if event == 4:
+            ax.scatter(rounds[seq], reg1[seq], color='orange', marker='o')
+            ax.scatter(rounds[seq], reg2[seq], color='blue', marker='o')
+        seq = seq + 1
     ax.set_xlabel('round')
     ax.set_ylabel('regret')
     ax.axis('on')
+    plt.tight_layout()
     plt.legend(labels=['UCB', 'CUCB'])
     plt.grid(True)
     plt.title('Regret')
@@ -296,6 +310,7 @@ def plot_bias(ucb_res, contextual_res, oracle_res):
     ax.set_xlabel('round')
     ax.set_ylabel('sum_difference')
     ax.axis('on')
+    plt.tight_layout()
     plt.legend(labels=['UCB', 'CUCB'])
     plt.grid(True)
     plt.show()
@@ -309,12 +324,13 @@ def plot_optimal_choose(_rate1, _rate2):
     plt.rc('font', family='Times New Roman', style='normal', size=13)
     plt.subplots_adjust(left=None, bottom=None, right=None, top=None, wspace=None, hspace=None)
     ax = fig.add_subplot(1, 1, 1)
-    ax.scatter(rounds, _rate1, color='orange', marker='*')
-    ax.scatter(rounds, _rate2, color='blue', marker='x')
+    ax.scatter(rounds, _rate1, color='orange', marker='*', label='UCB')
+    ax.scatter(rounds, _rate2, color='blue', marker='x', label='CUCB')
     ax.set_xlabel('round')
     ax.set_ylabel('right choose rate')
     ax.axis('on')
-    plt.legend(labels=['UCB', 'CUCB'])
+    plt.tight_layout()
+    plt.legend()
     plt.show()
 
 
@@ -325,12 +341,13 @@ alpha = 2  # UCB confidence parameter
 if __name__ == '__main__':
     start = time.clock()
     # fundamental parameters
-    user_num = 50  # the number of participated customers
-    event_num = 80  # the number of demand response event
+    user_num = 20  # the number of participated customers
+    event_num = 1000  # the number of demand response event
     sit_num = 3  # the number of situations
 
     # power system command configuration
-    target = 10  # fixed target which can be time-varying
+    # according to the user expectation to choose the target
+    target = 4  # fixed target which can be time-varying
 
     # initial configuration
     # user's configuration
@@ -340,7 +357,7 @@ if __name__ == '__main__':
     # demand aggregator configuration
     KNOWLEDGE_INIT = pd.DataFrame(columns=['index', "sit1", 'UCB1', "sit2", 'UCB2', "sit3", 'UCB3',
                                            "power", "time1", 'time2', 'time3', 'signal'])
-    KNOWLEDGE_INIT['power'] = 200
+    KNOWLEDGE_INIT['power'] = 600
     KNOWLEDGE_INIT['index'] = range(user_num)
     KNOWLEDGE_INIT['signal'] = 0
 
@@ -367,7 +384,7 @@ if __name__ == '__main__':
     oracle, oracle_results = oracle_play(User_PROB, truth, events, target, user_num)
     plot_results(results1, results2, oracle_results, target)
     plot_mismatch(results1, results2, oracle_results, target)
-    plot_true_regret(regret1, regret2)
+    plot_true_regret(regret1, regret2, events)
     elapsed = time.clock()-start
     print("time used", elapsed)
 
