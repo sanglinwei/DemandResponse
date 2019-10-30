@@ -8,6 +8,10 @@ import pandas as pd
 import numpy as np
 import time
 import matplotlib.pyplot as plt
+import matplotlib as mpl
+import seaborn as sns
+
+mpl.style.use('default')
 
 
 # run common ucb in contextual
@@ -250,6 +254,7 @@ def plot_mismatch(ucb_res, contextual_res, oracle_res, _target):
     plt.legend(labels=['UCB', 'CUCB', 'oracle'])
     plt.grid(True)
     plt.title('Mismatch')
+    # plt.savefig('mismatch.svg')
     plt.show()
     return 0
 
@@ -277,17 +282,45 @@ def plot_true_regret(reg1, reg2, _events):
             ax.scatter(rounds[seq], reg2[seq], color='blue', marker='o')
         seq = seq + 1
     ax.set_xlabel('round')
-    ax.set_ylabel('regret')
+    ax.set_ylabel('instantaneous regret')
     ax.axis('on')
     plt.tight_layout()
     plt.legend(labels=['UCB', 'CUCB'])
     plt.grid(True)
-    plt.title('Regret')
+    plt.title('Instantaneous Regret')
+    # plt.savefig('instantaneous_regret.svg')
     plt.show()
     return 0
 
 
 # plot accumulate regret
+def plot_acc_regret(reg1, reg2):
+    acc_reg1 = list()
+    acc_reg2 = list()
+    rounds = range(len(reg1))
+    for i in rounds:
+        acc_reg1.append(sum(reg1[0:i+1]))
+        acc_reg2.append(sum(reg2[0:i+1]))
+
+    fig = plt.figure()
+    plt.rc('font', family='Times New Roman', style='normal', size=13)
+    plt.subplots_adjust(left=None, bottom=None, right=None, top=None, wspace=None, hspace=None)
+    ax = fig.add_subplot(1, 1, 1)
+    ax.plot(rounds, acc_reg1, label='UCB')
+    ax.plot(rounds, acc_reg2, label='CUCB')
+    ax.set_xlabel('round')
+    ax.set_ylabel('accumulate regret')
+    ax.axis('on')
+    plt.legend(labels=['UCB', 'CUCB'])
+    plt.tight_layout()
+    plt.legend()
+    plt.grid(True)
+    # plt.savefig('acc_regret.svg')
+    plt.show()
+    return 0
+
+
+# plot accumulate bias
 def plot_bias(ucb_res, contextual_res, oracle_res):
     _bias1 = list()
     _bias2 = list()
@@ -334,6 +367,20 @@ def plot_optimal_choose(_rate1, _rate2):
     plt.show()
 
 
+def plot_user_profile(user_prob):
+
+    fig = plt.figure()
+    plt.rc('font', family='Times New Roman', style='normal', size=13)
+    plt.subplots_adjust()
+    sns.set()
+    ax = sns.heatmap(user_prob[['sit1', 'sit2', 'sit2']], annot=True, cmap="YlGnBu")
+    plt.tight_layout()
+    plt.legend()
+    # plt.savefig('user_heatmap.svg')
+    plt.show()
+    return 0
+
+
 # fundamental parameter
 alpha = 2  # UCB confidence parameter
 
@@ -341,13 +388,13 @@ alpha = 2  # UCB confidence parameter
 if __name__ == '__main__':
     start = time.clock()
     # fundamental parameters
-    user_num = 20  # the number of participated customers
-    event_num = 1000  # the number of demand response event
+    user_num = 50  # the number of participated customers
+    event_num = 500  # the number of demand response event
     sit_num = 3  # the number of situations
 
     # power system command configuration
     # according to the user expectation to choose the target
-    target = 4  # fixed target which can be time-varying
+    target = 20  # fixed target which can be time-varying
 
     # initial configuration
     # user's configuration
@@ -384,7 +431,10 @@ if __name__ == '__main__':
     oracle, oracle_results = oracle_play(User_PROB, truth, events, target, user_num)
     plot_results(results1, results2, oracle_results, target)
     plot_mismatch(results1, results2, oracle_results, target)
+    plot_acc_regret(regret1, regret2)
     plot_true_regret(regret1, regret2, events)
+    plot_user_profile(User_PROB)
+    plot_bias(results1, results2, oracle_results)
     elapsed = time.clock()-start
     print("time used", elapsed)
 
