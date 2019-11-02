@@ -210,7 +210,7 @@ def plot_results(ucb_res, contextual_res, oracle_res, _target):
     ax.set_ylabel('reward')
     ax.axis('on')
     plt.tight_layout()
-    plt.legend(labels=['UCB', 'CUCB', 'Oracle', 'target'])
+    plt.legend(labels=['CUCB', 'ConCUCB', 'offline', 'target'])
     plt.grid(True)
     plt.show()
     return 0
@@ -251,10 +251,12 @@ def plot_mismatch(ucb_res, contextual_res, oracle_res, _target):
     plt.ylabel('mismatch')
     plt.axis('on')
     plt.tight_layout()
-    plt.legend(labels=['UCB', 'CUCB', 'oracle'])
+    plt.legend(labels=['CUCB', 'ConCUCB', 'oracle'])
     plt.grid(True)
-    plt.title('Mismatch')
-    # plt.savefig('mismatch.svg')
+
+    plt.savefig('mismatch.svg')
+    plt.savefig('mismatch.pdf')
+
     plt.show()
     return 0
 
@@ -285,10 +287,11 @@ def plot_true_regret(reg1, reg2, _events):
     ax.set_ylabel('instantaneous regret')
     ax.axis('on')
     plt.tight_layout()
-    plt.legend(labels=['UCB', 'CUCB'])
+    plt.legend(labels=['CUCB', 'ConCUCB'])
     plt.grid(True)
-    plt.title('Instantaneous Regret')
-    # plt.savefig('instantaneous_regret.svg')
+
+    plt.savefig('instantaneous_regret.svg')
+    plt.savefig('instantaneous_regret.pdf')
     plt.show()
     return 0
 
@@ -306,8 +309,8 @@ def plot_acc_regret(reg1, reg2):
     plt.rc('font', family='Times New Roman', style='normal', size=13)
     plt.subplots_adjust(left=None, bottom=None, right=None, top=None, wspace=None, hspace=None)
     ax = fig.add_subplot(1, 1, 1)
-    ax.plot(rounds, acc_reg1, label='UCB')
-    ax.plot(rounds, acc_reg2, label='CUCB')
+    ax.plot(rounds, acc_reg1, label='CUCB')
+    ax.plot(rounds, acc_reg2, label='ConCUCB')
     ax.set_xlabel('round')
     ax.set_ylabel('accumulate regret')
     ax.axis('on')
@@ -315,7 +318,8 @@ def plot_acc_regret(reg1, reg2):
     plt.tight_layout()
     plt.legend()
     plt.grid(True)
-    # plt.savefig('acc_regret.svg')
+    plt.savefig('acc_regret.svg')
+    plt.savefig('acc_regret.pdf')
     plt.show()
     return 0
 
@@ -373,10 +377,11 @@ def plot_user_profile(user_prob):
     plt.rc('font', family='Times New Roman', style='normal', size=13)
     plt.subplots_adjust()
     sns.set()
-    ax = sns.heatmap(user_prob[['sit1', 'sit2', 'sit2']], annot=True, cmap="YlGnBu")
+    ax = sns.heatmap(user_prob[['sit1', 'sit2', 'sit3']], annot=True, cmap="YlGnBu")
     plt.tight_layout()
     plt.legend()
-    # plt.savefig('user_heatmap.svg')
+    plt.savefig('user_heatmap.svg')
+    plt.savefig('user_heatmap.pdf')
     plt.show()
     return 0
 
@@ -388,13 +393,13 @@ alpha = 2  # UCB confidence parameter
 if __name__ == '__main__':
     start = time.clock()
     # fundamental parameters
-    user_num = 50  # the number of participated customers
-    event_num = 500  # the number of demand response event
+    user_num = 20  # the number of participated customers
+    event_num = 300  # the number of demand response event
     sit_num = 3  # the number of situations
 
     # power system command configuration
     # according to the user expectation to choose the target
-    target = 20  # fixed target which can be time-varying
+    target = 5  # fixed target which can be time-varying
 
     # initial configuration
     # user's configuration
@@ -434,7 +439,7 @@ if __name__ == '__main__':
     plot_acc_regret(regret1, regret2)
     plot_true_regret(regret1, regret2, events)
     plot_user_profile(User_PROB)
-    plot_bias(results1, results2, oracle_results)
+    # plot_bias(results1, results2, oracle_results)
     elapsed = time.clock()-start
     print("time used", elapsed)
 
