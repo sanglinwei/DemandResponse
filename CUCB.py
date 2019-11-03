@@ -27,9 +27,15 @@ def run_ucb_in_contextual(knowledge, user_prob, _truth, _events, _target, _user_
     regret = list()
     rate_choose = list()
     j = 0
+
+    # knowledge bias
+    knowledge_bias = list()
+
     for event_id in events_str:
+
         # different situation
         sit_choose = 'sit' + event_id
+
         # index
         ucb = k['sit1'] + np.sqrt(alpha * np.log(num) / (2 * k['time1']))
         k.loc[:, 'UCB1'] = ucb
@@ -37,8 +43,14 @@ def run_ucb_in_contextual(knowledge, user_prob, _truth, _events, _target, _user_
         m = k['sit1'].tolist()
         accumulate = list([])
 
+        sum_knowledge_bia = 0
+
         for i in range(_user_num):
             accumulate.append(sum(m[0:i+1]))
+            sum_knowledge_bia = sum_knowledge_bia + np.abs(k['sit1'][i] - user_prob[sit_choose][i])
+
+        # append knowledge bias
+        knowledge_bias.append(sum_knowledge_bia)
 
         # choose demand
         signal = list([x < _target+0.5 for x in accumulate])
@@ -79,7 +91,7 @@ def run_ucb_in_contextual(knowledge, user_prob, _truth, _events, _target, _user_
         j = j + 1
         results.append(sum_feedback)
         num = num + 1
-    return k, results, rate_choose, regret
+    return k, results, rate_choose, regret, knowledge_bias
 
 
 # run contextual ucb
@@ -95,6 +107,10 @@ def run_contextual_ucb(knowledge, user_prob, _truth, _events, _target, _user_num
     regret = list()
     rate_choose = list()
     j = 0
+
+    # knowledge bias
+    knowledge_bias = list()
+
     for event_id in events_str:
 
         # different situation
@@ -109,8 +125,13 @@ def run_contextual_ucb(knowledge, user_prob, _truth, _events, _target, _user_num
         m = k[sit_choose].tolist()
         accumulate = list()
 
+        sum_knowledge_bia = 0
+
         for i in range(_user_num):
             accumulate.append(sum(m[0:i + 1]))
+            sum_knowledge_bia = sum_knowledge_bia + np.abs(k[sit_choose][i] - user_prob[sit_choose][i])
+
+        knowledge_bias.append(sum_knowledge_bia)
 
         # choose demand
         signal = list([x < _target+0.5 for x in accumulate])
@@ -152,7 +173,7 @@ def run_contextual_ucb(knowledge, user_prob, _truth, _events, _target, _user_num
         j = j + 1
         results.append(sum_feedback)
         num_sit[int(event_id) - 1] = num_sit[int(event_id) - 1] + 1
-    return k, results, rate_choose, regret
+    return k, results, rate_choose, regret, knowledge_bias
 
 
 # the oracle play results
@@ -187,7 +208,7 @@ def oracle_play(user_prob, _truth, _events, _target, _user_num):
 
 # scale the probability
 def prob_generate(num):
-    prob = 50*np.random.randn(num)+50
+    prob = 70*np.random.randn(num)+30
     # prob[prob > 70] = np.random.randn(sum(prob > 70))*25+50
     prob[prob > 100] = np.ones(sum(prob > 100))*100
     prob[prob < 0] = np.zeros(sum(prob < 0))
@@ -199,7 +220,7 @@ def plot_results(ucb_res, contextual_res, oracle_res, _target):
     x = range(len(ucb_res))
     target_line = np.ones(len(ucb_res))*_target
     fig = plt.figure()
-    plt.rc('font', family='Times New Roman', style='normal', size=13)
+    plt.rc('font', family='Times New Roman', style='normal', size=20)
     plt.subplots_adjust(left=None, bottom=None, right=None, top=None, wspace=None, hspace=None)
     ax = fig.add_subplot(1, 1, 1)
     ax.plot(x, ucb_res)
@@ -241,7 +262,7 @@ def plot_mismatch(ucb_res, contextual_res, oracle_res, _target):
         oracle_mismatch.append(np.square(oracle_res[i]-_target))
     rounds = range(num)
     plt.figure()
-    plt.rc('font', family='Times New Roman', style='normal', size=13)
+    plt.rc('font', family='Times New Roman', style='normal', size=20)
     plt.subplots_adjust(left=None, bottom=None, right=None, top=None, wspace=None, hspace=None)
     plt.subplot(111)
     plt.scatter(rounds, ucb_mismatch, marker='o')
@@ -253,11 +274,29 @@ def plot_mismatch(ucb_res, contextual_res, oracle_res, _target):
     plt.tight_layout()
     plt.legend(labels=['CUCB', 'ConCUCB', 'oracle'])
     plt.grid(True)
-
     plt.savefig('mismatch.svg')
     plt.savefig('mismatch.pdf')
-
     plt.show()
+    return 0
+
+
+def plot_knowledge_learn(bias1, bias2):
+    rounds = range(len(bias1))
+    fig = plt.figure()
+    plt.rc('font', family='Times New Roman', style='normal', size=20)
+    plt.subplots_adjust(left=None, bottom=None, right=None, top=None, wspace=None, hspace=None)
+    ax = fig.add_subplot(1, 1, 1)
+    ax.scatter(rounds, bias1, marker='+')
+    ax.scatter(rounds, bias2, marker='*')
+    ax.set_xlabel('round')
+    ax.set_ylabel('learning deviation')
+    ax.axis('on')
+    plt.tight_layout()
+    plt.legend(labels=['CUCB', 'ConCUCB'])
+    plt.grid(True)
+    plt.show()
+    plt.savefig('knowledge_learning.svg')
+    plt.savefig('knowledge_learning.pdf')
     return 0
 
 
@@ -265,7 +304,7 @@ def plot_mismatch(ucb_res, contextual_res, oracle_res, _target):
 def plot_true_regret(reg1, reg2, _events):
     rounds = range(len(reg1))
     fig = plt.figure()
-    plt.rc('font', family='Times New Roman', style='normal', size=13)
+    plt.rc('font', family='Times New Roman', style='normal', size=20)
     plt.subplots_adjust(left=None, bottom=None, right=None, top=None, wspace=None, hspace=None)
     ax = fig.add_subplot(1, 1, 1)
     seq = 0
@@ -306,7 +345,7 @@ def plot_acc_regret(reg1, reg2):
         acc_reg2.append(sum(reg2[0:i+1]))
 
     fig = plt.figure()
-    plt.rc('font', family='Times New Roman', style='normal', size=13)
+    plt.rc('font', family='Times New Roman', style='normal', size=20)
     plt.subplots_adjust(left=None, bottom=None, right=None, top=None, wspace=None, hspace=None)
     ax = fig.add_subplot(1, 1, 1)
     ax.plot(rounds, acc_reg1, label='CUCB')
@@ -325,31 +364,39 @@ def plot_acc_regret(reg1, reg2):
 
 
 # plot accumulate bias
-def plot_bias(ucb_res, contextual_res, oracle_res):
+def plot_bias(ucb_res, contextual_res, oracle_res, _target):
     _bias1 = list()
     _bias2 = list()
+    _bias3 = list()
     accumulate_bias1 = list()
     accumulate_bias2 = list()
+    accumulate_bias3 = list()
     for i in range(len(ucb_res)):
-        _bias1.append(np.square(ucb_res[i]-oracle_res[i]))
-        _bias2.append(np.square(contextual_res[i]-oracle_res[i]))
+        _bias1.append(np.square(ucb_res[i]-_target))
+        _bias2.append(np.square(contextual_res[i]-_target))
+        _bias3.append(np.square(oracle_res[i]-_target))
     for i in range(len(ucb_res)):
         # sum bias
         accumulate_bias1.append(sum(_bias1[0:i+1]))
         accumulate_bias2.append(sum(_bias2[0:i+1]))
+        accumulate_bias3.append(sum(_bias3[0:i+1]))
+
     rounds = range(len(ucb_res))
     fig = plt.figure()
-    plt.rc('font', family='Times New Roman', style='normal', size=13)
+    plt.rc('font', family='Times New Roman', style='normal', size=20)
     plt.subplots_adjust(left=None, bottom=None, right=None, top=None, wspace=None, hspace=None)
     ax = fig.add_subplot(1, 1, 1)
-    ax.plot(rounds, accumulate_bias1, color='orange', marker='*')
-    ax.plot(rounds, accumulate_bias2, color='blue', marker='x')
+    ax.plot(rounds, accumulate_bias1)
+    ax.plot(rounds, accumulate_bias2)
+    ax.plot(rounds, accumulate_bias3)
     ax.set_xlabel('round')
-    ax.set_ylabel('sum_difference')
+    ax.set_ylabel('accumulate mismatch')
     ax.axis('on')
     plt.tight_layout()
-    plt.legend(labels=['UCB', 'CUCB'])
+    plt.legend(labels=['UCB', 'CUCB', 'oracle'])
     plt.grid(True)
+    plt.savefig('acc_mismatch.svg')
+    plt.savefig('acc_mismatch.pdf')
     plt.show()
     return 0
 
@@ -358,7 +405,7 @@ def plot_bias(ucb_res, contextual_res, oracle_res):
 def plot_optimal_choose(_rate1, _rate2):
     rounds = range(len(_rate1))
     fig = plt.figure()
-    plt.rc('font', family='Times New Roman', style='normal', size=13)
+    plt.rc('font', family='Times New Roman', style='normal', size=20)
     plt.subplots_adjust(left=None, bottom=None, right=None, top=None, wspace=None, hspace=None)
     ax = fig.add_subplot(1, 1, 1)
     ax.scatter(rounds, _rate1, color='orange', marker='*', label='UCB')
@@ -373,11 +420,11 @@ def plot_optimal_choose(_rate1, _rate2):
 
 def plot_user_profile(user_prob):
 
-    fig = plt.figure()
-    plt.rc('font', family='Times New Roman', style='normal', size=13)
+    plt.figure()
+    plt.rc('font', family='Times New Roman', style='normal', size=20)
     plt.subplots_adjust()
     sns.set()
-    ax = sns.heatmap(user_prob[['sit1', 'sit2', 'sit3']], annot=True, cmap="YlGnBu")
+    sns.heatmap(user_prob[['sit1', 'sit2', 'sit3']], annot=True)
     plt.tight_layout()
     plt.legend()
     plt.savefig('user_heatmap.svg')
@@ -393,13 +440,13 @@ alpha = 2  # UCB confidence parameter
 if __name__ == '__main__':
     start = time.clock()
     # fundamental parameters
-    user_num = 20  # the number of participated customers
-    event_num = 300  # the number of demand response event
+    user_num = 50  # the number of participated customers 20;
+    event_num = 300  # the number of demand response event 300;
     sit_num = 3  # the number of situations
 
     # power system command configuration
     # according to the user expectation to choose the target
-    target = 5  # fixed target which can be time-varying
+    target = 20  # fixed target which can be time-varying 5;
 
     # initial configuration
     # user's configuration
@@ -427,18 +474,28 @@ if __name__ == '__main__':
     truth = run_truth(events, User_PROB, user_num, event_num)
 
     # play the common UCB in multi-contexts based on the truth
-    knowledge_common_in_contextual, results1, rate1, regret1 = run_ucb_in_contextual(KNOWLEDGE_INIT, User_PROB, truth,
-                                                                                     events, target, user_num)
+    knowledge_common_in_contextual, results1, rate1, regret1, k_bias1 = run_ucb_in_contextual(KNOWLEDGE_INIT, User_PROB,
+                                                                                              truth, events, target,
+                                                                                              user_num)
     # play the contextual-UCB algorithm based on the truth
-    knowledge_contextual, results2, rate2, regret2 = run_contextual_ucb(KNOWLEDGE_INIT, User_PROB, truth, events,
-                                                                        target, user_num, sit_num)
+    knowledge_contextual, results2, rate2, regret2, k_bias2 = run_contextual_ucb(KNOWLEDGE_INIT, User_PROB, truth,
+                                                                                 events, target, user_num, sit_num)
     # play the oracle choose based on the truth
     oracle, oracle_results = oracle_play(User_PROB, truth, events, target, user_num)
-    plot_results(results1, results2, oracle_results, target)
-    plot_mismatch(results1, results2, oracle_results, target)
-    plot_acc_regret(regret1, regret2)
+    # plot_results(results1, results2, oracle_results, target)
+    # plot_mismatch(results1, results2, oracle_results, target)
+
+    # instantaneous regret
     plot_true_regret(regret1, regret2, events)
+    # accumulate mismatch
+    plot_bias(results1, results2, oracle_results, target)
+    # accumulate regret
+    plot_acc_regret(regret1, regret2)
+    # knowledge learned
+    plot_knowledge_learn(k_bias1, k_bias2)
+    # user profile
     plot_user_profile(User_PROB)
+
     # plot_bias(results1, results2, oracle_results)
     elapsed = time.clock()-start
     print("time used", elapsed)
