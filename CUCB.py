@@ -294,9 +294,9 @@ def plot_knowledge_learn(bias1, bias2):
     plt.tight_layout()
     plt.legend(labels=['CUCB', 'ConCUCB'])
     plt.grid(True)
-    plt.show()
     plt.savefig('knowledge_learning.svg')
     plt.savefig('knowledge_learning.pdf')
+    plt.show()
     return 0
 
 
